@@ -3,7 +3,7 @@
  *            dimitri.j.vlachos@gmail.com
  *
  *  Adapted from:
- *            https://randomnerdtutorials.com/esp-mesh-esp32-esp8266-painlessmesh/
+ *            
  *            UoL Lectures
  */
 #include <Arduino_JSON.h>

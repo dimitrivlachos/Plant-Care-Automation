@@ -3,7 +3,7 @@
  *            dimitri.j.vlachos@gmail.com
  *
  *  Adapted from:
- *            https://randomnerdtutorials.com/esp-mesh-esp32-esp8266-painlessmesh/
+ *            
  *            https://makersportal.com/blog/2020/5/26/capacitive-soil-moisture-calibration-with-arduino
  *            UoL Lectures
  */
