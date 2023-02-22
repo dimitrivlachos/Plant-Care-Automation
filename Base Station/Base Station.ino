@@ -3,8 +3,8 @@
  *            dimitri.j.vlachos@gmail.com
  *
  *  Adapted from:
- *            
  *            UoL Lectures
+ *            https://randomnerdtutorials.com/esp8266-nodemcu-http-get-post-arduino/
  */
 
 #include <Arduino_JSON.h>
@@ -20,6 +20,7 @@
 #pragma region Networking
 #include <ESP8266WiFi.h>
 #include <ESP8266WebServer.h>
+#include <ESP8266HTTPClient.h>
 #include <ArduinoJson.h>
 
 // For OTA
@@ -45,22 +46,29 @@ const char* password = "REPLACE_WITH_YOUR_PASSWORD";
 Scheduler userScheduler;  // to control your personal task
 
 // Prototype methods to insantiate the tasks with
-void pingNodeCycle();
+
 void updateReadings();
 void updateDisplay();
 void oledSaver();
 void blinkOn();
 void blinkLED(int blinks, long interval = TASK_SECOND / 10);  // Prototype for default parameter values
+void getMonitorReadings();
+void resetButtonDebounce();
 
 //Create tasks
 Task taskUpdateReadings(TASK_SECOND * 1, TASK_FOREVER, &updateReadings);
 Task taskUpdateDisplay(TASK_SECOND * 1, TASK_FOREVER, &updateDisplay);
 Task taskOledSaver(TASK_MINUTE * 5, TASK_FOREVER, &oledSaver);
 Task taskLedBlink(TASK_SECOND / 2, 4, &blinkOn);
+Task taskCheckMonitor(TASK_SECOND * 10, TASK_FOREVER, &getMonitorReadings);
+Task taskDebounceReset(TASK_SECOND * 1, TASK_FOREVER, &resetButtonDebounce);
 
 /* * * * * * * * * * * * * * * */
 
 const int led_pin = D4;
+const int debug_button = D5;
+
+const String monitorAddress = "http://192.168.0.202";
 
 // BME object on the default I2C pins
 Adafruit_BME280 bme;
@@ -83,19 +91,26 @@ float lux;
 // Data from plant stations
 int soil_moisture_percent;
 
+bool debouncer = false;
 
 /* * * * * * * * * * * * * * * */
 
 void setup() {
+  // Start serial communication
   Serial.begin(115200);
-
+  // Set led pin mode (integrated LED)
   pinMode(led_pin, OUTPUT);
+  // Set the button pin mode
+  pinMode(debug_button, INPUT);
 
+  // Initialise onboard sensors
   initBME();
   lightMeter.begin();
 
+  // Populate initial sensor data
   updateReadings();
 
+  // Initialise text position
   oledSaver();
 
   // Initialise display
@@ -181,21 +196,199 @@ void setup() {
   userScheduler.addTask(taskUpdateDisplay);
   userScheduler.addTask(taskOledSaver);
   userScheduler.addTask(taskLedBlink);
+  userScheduler.addTask(taskCheckMonitor);
+  userScheduler.addTask(taskDebounceReset);
   taskUpdateReadings.enable();
   taskUpdateDisplay.enable();
   taskOledSaver.enable();
+  taskCheckMonitor.enable();
+
+  setupJSON();
 }
 
 void loop() {
   // Handle OTA events
   ArduinoOTA.handle();
-  //Handling of incoming client requests
+  // Handling of incoming client requests
   server.handleClient();
+  // Handling async tasks
   userScheduler.execute();
+  // Check the button
+  checkButton();
 }
 
-/* * * * * * * * * * * * * * * */
+void checkButton() {
+  // Guard statement for software debouncing
+  if (debouncer) {
+    return;
+  }
+  // read the state of the pushbutton value:
+  int buttonState = digitalRead(debug_button);
 
+  if (buttonState == HIGH) {
+    Serial.println("Button Pressed");
+    sendWaterCommand();
+    debouncer = true;
+    taskDebounceReset.enableDelayed(TASK_SECOND);
+  }
+}
+
+/**
+ * Processes JSON data received from monitoring station
+ * and sends necessary commands back to the station
+ */
+void handleMonitor(JSONVar j) {
+  int soil_moisture_percent = j["Readings"]["soil_moisture_percent"];
+  int monitor_temp = j["Readings"]["temperature"];
+  int monitor_hum = j["Readings"]["humidity"];
+  bool isServoOpen = j["States"]["servo_state"];
+  bool isPumping = j["States"]["pump_state"];
+
+  // If the pump is not running, check moisture levels
+  if (!isPumping) {
+    // If the moisture content is low, tell the plant monitor to water
+    if (soil_moisture_percent < 30) {
+      Serial.println("Soil moisture detected to be low, watering");
+      sendWaterCommand();
+    }
+  }
+
+  // If the servo (lid) is closed
+  if (!isServoOpen) {
+    // Then check if it is too hot
+    if (monitor_temp > 24) {
+      // If it is too hot, check if it is colder outside
+      float difference = temperature - monitor_temp;
+      if (difference < -2) {
+        // Opening the lid will cool the plant
+        Serial.println("Temp higher than ambient, opening");
+        changeServoState(1);
+      }
+    }
+  }
+
+  // If the servo (lid) is open
+  if (isServoOpen) {
+    // Check if it is cold
+    if (monitor_temp < 14) {
+      // It is too cold, check if it is warmer outside
+      float difference = temperature - monitor_temp;
+      if (difference < 2) {
+        // Closing the lid will warm the plant
+        Serial.println("Temp lower than ambient, closing");
+        changeServoState(0);
+      }
+    }
+  }
+
+  // If there are less than 100 lumens
+  if (lux < 100) {
+    // Turn on the light
+    Serial.println("Light levels low, activating LED");
+    changeLightState(1);
+  }
+
+  // If there are less than 100 lumens
+  if (lux > 1000) {
+    // Turn off the lights
+    Serial.println("Light levels sufficient, deactivating LED");
+    changeLightState(0);
+  }
+}
+
+void sendWaterCommand() {
+  sendCommand("/waterplant");
+}
+
+void changeServoState(int state) {
+  sendState("/setservo", state);
+}
+
+void changeLightState(int state) {
+  sendState("/setlight", state);
+}
+
+void sendState(String command, int state) {
+  // Make sure we are still connected to the wifi
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("Sending state command: ");
+    Serial.println(command + state);
+    
+    WiFiClient client;
+    HTTPClient http;
+
+    String serverPath = monitorAddress + command + "?state=" + state;
+
+    // Your Domain name with URL path or IP address with path
+    http.begin(client, serverPath.c_str());
+
+    // Send HTTP GET request
+    int httpResponseCode = http.GET();
+
+    if (httpResponseCode > 0) {
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+
+      //String payload = http.getString();
+      //JSONVar jsonObject = JSON.parse(payload);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
+    // Free resources
+    http.end();
+  } else {
+    Serial.println("WiFi Disconnected");
+  }
+}
+
+void sendCommand(String command) {
+  // Make sure we are still connected to the wifi
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.print("Sending command: ");
+    Serial.println(command);
+
+    WiFiClient client;
+    HTTPClient http;
+
+    String serverPath = monitorAddress + command;
+
+    // Your Domain name with URL path or IP address with path
+    http.begin(client, serverPath.c_str());
+
+    // Send HTTP GET request
+    int httpResponseCode = http.GET();
+
+    if (httpResponseCode > 0) {
+      Serial.print("HTTP Response code: ");
+      Serial.println(httpResponseCode);
+
+      //String payload = http.getString();
+      //JSONVar jsonObject = JSON.parse(payload);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
+
+    http.end();
+
+  } else {
+    Serial.println("WiFi Disconnected");
+  }
+}
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * This region contains functions that get called by *
+ * the task Scheduler, allowing for asynchronous     *
+ * task execution without the need for using delay   *
+ * functions. Check above to see how often each of   *
+ * these tasks get pinged.                           *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma region Tasks
+/**
+ * Updates global sensor reading variables with
+ * new information from the sensors
+ */
 void updateReadings() {
   temperature = bme.readTemperature();
   humidity = bme.readHumidity();
@@ -203,13 +396,26 @@ void updateReadings() {
   lux = lightMeter.readLightLevel();
 }
 
+/**
+ * Updates data on display, using the co-ordinates
+ * set by the oledSaver() function as the starting
+ * location for writing
+ */
 void updateDisplay() {
   // Each character is 6x8 pixels
 
   display.clearDisplay();
   display.setTextSize(1);
   display.setTextColor(WHITE);
-  //display.setCursor(0, 16); // This takes it down to the blue area
+
+  /*
+   * using setCursor in increments of 8 is equivalent
+   * to using display.println(). However, by doing it
+   * this way we are able to 'shift' the text around
+   * the screen, allowing us to implement the
+   * oledSaver() function to prevent burn in on data
+   * displayed for extended periods of time.
+   */
 
   display.setCursor(screen_x, screen_y);
   display.print("Temp: \t");
@@ -234,6 +440,15 @@ void updateDisplay() {
   display.display();
 }
 
+/**
+ * Randomly shifts the starting location of text on
+ * the OLED output in order to prevent burn-in when
+ * left on for extended periods.
+ *
+ * The exact 'start region' possible has been
+ * manually set to fit the text displayed by the
+ * updateDisplay() function
+ */
 void oledSaver() {
   int new_x = random(0, 20);
   int new_y = random(16, 33);
@@ -241,19 +456,64 @@ void oledSaver() {
   screen_y = new_y;
 }
 
-//Init BME280
-void initBME() {
-  if (!bme.begin(0x76)) {
-    Serial.println("Could not find a valid BME280 sensor, check wiring!");
-    while (1)
-      ;
+/**
+ * Requests JSON data from monitoring station
+ * using REST API based requests
+ */
+void getMonitorReadings() {
+  // Make sure we are still connected to the wifi
+  if (WiFi.status() == WL_CONNECTED) {
+    //Serial.println("Attempting to receive info");
+    WiFiClient client;
+    HTTPClient http;
+
+    String serverPath = monitorAddress + "/json";  // + "?temperature=24.37";
+
+    // Your Domain name with URL path or IP address with path
+    http.begin(client, serverPath.c_str());
+
+    // Send HTTP GET request
+    int httpResponseCode = http.GET();
+
+    if (httpResponseCode > 0) {
+      //Serial.print("HTTP Response code: ");
+      //Serial.println(httpResponseCode);
+
+      String payload = http.getString();
+      JSONVar jsonObject = JSON.parse(payload);
+
+      handleMonitor(jsonObject);
+      //Serial.println(payload);
+    } else {
+      Serial.print("Error code: ");
+      Serial.println(httpResponseCode);
+    }
+    // Free resources
+    http.end();
+  } else {
+    Serial.println("WiFi Disconnected");
   }
 }
 
-#pragma region Server code
+/**
+ * Resets bool used for software debouncing 
+ * to prevent the button press firing more 
+ * than once per second
+ */
+void resetButtonDebounce() {
+  debouncer = false;
+  taskDebounceReset.disable();
+}
+#pragma endregion
+
+/* * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * This region contains functions necessary for the  *
+ * webserver to run, enabling the dashboard and REST *
+ * requests to be made.                              *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * */
+#pragma region Network code
 
 void get_index() {
-
   String html = "<!DOCTYPE html> <html> ";
   html += "<head><meta http-equiv=\"refresh\" content=\"2\"><meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\"></head>";
   html += "<body> <h1>Greenhouse Base Station Dashboard</h1>";
@@ -279,19 +539,23 @@ void get_index() {
 
 // Utility function to send JSON data
 void get_json() {
-
   // Create JSON data
   updateJSON();
-
   // Make JSON data ready for the http request
   String jsonStr;
   serializeJsonPretty(doc, jsonStr);
-
   // Send the JSON data
   server.send(200, "application/json", jsonStr);
 }
 
 void updateJSON() {
+  doc["Readings"]["temperature"] = temperature;
+  doc["Readings"]["humidity"] = humidity;
+  doc["Readings"]["pressure"] = pressure;
+  doc["Readings"]["lux"] = lux;
+}
+
+void setupJSON() {
   // Add JSON request data
   doc["Content-Type"] = "application/json";
   doc["Status"] = 200;
@@ -306,6 +570,9 @@ void updateJSON() {
 
 #pragma endregion
 
+/* * * * * * * * * * * * * * * * * * * * * * * * * * *
+ * Task based LED blinking functionality             *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #pragma region LED Blink functions
 void blinkLED(int blinks, long interval) {
   taskLedBlink.setInterval(interval);
@@ -339,3 +606,14 @@ inline void LEDOff() {
   digitalWrite(led_pin, LOW);
 }
 #pragma endregion
+
+/**
+ * Initialises BME280 sensor
+ */
+void initBME() {
+  if (!bme.begin(0x76)) {
+    Serial.println("Could not find a valid BME280 sensor, check wiring!");
+    while (1)
+      ;
+  }
+}
