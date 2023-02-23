@@ -154,7 +154,7 @@ void setup() {
   delay(2000);
   display.clearDisplay();
 
-#pragma region WiFi Setup
+  #pragma region WiFi Setup
   //Connect to the WiFi network
   WiFi.begin(ssid, password);
 
@@ -164,7 +164,7 @@ void setup() {
     Serial.println("Waiting to connect...");
   }
 
-#pragma region OTA Setup
+  #pragma region OTA Setup
   // Port defaults to 8266
   // ArduinoOTA.setPort(8266);
 
@@ -210,7 +210,7 @@ void setup() {
     }
   });
   ArduinoOTA.begin();
-#pragma endregion
+  #pragma endregion
 
   //Print the board IP address
   Serial.print("IP address: ");
@@ -223,7 +223,7 @@ void setup() {
 
   server.begin();  //Start the server
   Serial.println("Server listening");
-#pragma endregion
+  #pragma endregion
 
   // Async task setup
   userScheduler.addTask(taskUpdateReadings);
@@ -503,7 +503,7 @@ void getMonitorReadings() {
     WiFiClient client;
     HTTPClient http;
 
-    String serverPath = monitorAddress + "/json";  // + "?temperature=24.37";
+    String serverPath = monitorAddress + "/json";
 
     // Your Domain name with URL path or IP address with path
     http.begin(client, serverPath.c_str());
@@ -681,7 +681,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 void get_index() {
   // Blink LED for visual queue
   blinkLED(3);
-  //Print a welcoming message on the index page
+  //Send the webpage
   server.send(200, "text/html", index_html);
 }
 
@@ -720,7 +720,7 @@ void setupJSON() {
   doc["Content-Type"] = "application/json";
   doc["Status"] = 200;
 
-  // Add distance sensor JSON object data
+  // Add sensor readings to JSON object data
   JsonObject sensorReadings = doc.createNestedObject("Readings");
   sensorReadings["temperature"] = temperature;
   sensorReadings["humidity"] = humidity;

@@ -494,7 +494,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 void get_index() {
   // Blink LED for visual queue
   blinkLED(3);
-  //Print a welcoming message on the index page
+  //Send the webpage
   server.send(200, "text/html", index_html);
 }
 
@@ -535,13 +535,13 @@ void setupJSON() {
   doc["Content-Type"] = "application/json";
   doc["Status"] = 200;
 
-  // Add distance sensor JSON object data
+  // Add sensor readings to JSON object data
   JsonObject sensorReadings = doc.createNestedObject("Readings");
   sensorReadings["soil_moisture_percent"] = soil_moisture_percent;
   sensorReadings["temperature"] = temperature;
   sensorReadings["humidity"] = humidity;
 
-  // Add distance sensor JSON object data
+  // Add actuator states to JSON object data
   JsonObject actuatorStates = doc.createNestedObject("States");
   actuatorStates["servo_state"] = isServoOpen;
   actuatorStates["pump_state"] = isPumping;
