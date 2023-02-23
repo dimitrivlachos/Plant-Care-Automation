@@ -328,7 +328,7 @@ void setLightState (bool on) {
  * new information from the sensors
  */
 void updateReadings() {
-  soil_moisture_percent = getSoilMoisture();
+  soil_moisture_percent = constrain(getSoilMoisture(), 0, 100);
   temperature = dht.readTemperature();
   humidity = dht.readHumidity();
   /*
@@ -492,12 +492,16 @@ const char index_html[] PROGMEM = R"rawliteral(
 
 // Function called to send webpage to client
 void get_index() {
+  // Blink LED for visual queue
+  blinkLED(3);
   //Print a welcoming message on the index page
   server.send(200, "text/html", index_html);
 }
 
 // Function called to send JSON data to client
 void get_json() {
+  // Blink LED for visual queue
+  blinkLED(2);
   // Create JSON data
   updateJSON();
   // Make JSON data ready for the http request
