@@ -82,7 +82,7 @@ Task taskDebounceReset(TASK_SECOND * 1, TASK_FOREVER, &resetButtonDebounce);
 /* * * * * * * * * * * * * * * */
 // Pin declarations
 const int led_pin = D4;
-const int debug_button = D5;
+const int button = D5;
 
 // Pins for ultrasonic sensor
 const int trig_pin = D6;
@@ -129,7 +129,7 @@ void setup() {
   // Set led pin mode (integrated LED)
   pinMode(led_pin, OUTPUT);
   // Set the button pin mode
-  pinMode(debug_button, INPUT);
+  pinMode(button, INPUT);
   // Set pins for distance sensor
   pinMode(trig_pin, OUTPUT);  // Sets the trigPin as an Output
   pinMode(echo_pin, INPUT);   // Sets the echoPin as an Input
@@ -262,7 +262,7 @@ void checkButton() {
     return;
   }
   // read the state of the pushbutton value:
-  int buttonState = digitalRead(debug_button);
+  int buttonState = digitalRead(button);
 
   if (buttonState == HIGH) {
     Serial.println("Button Pressed");
