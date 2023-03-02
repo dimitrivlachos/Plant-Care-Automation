@@ -51,6 +51,8 @@ The base station also has a built-in LED that is used to indicate when the syste
 
 The location of the text on the OLED display regularly shifts in order to prevent burn-in.
 
+The ultrasonic distance sensor is used to check the water level in the reservoir. It is mounted above the water in the resevoir that each plant stations' pump draws from. This information can be checked on the web page.
+
 The base station checks in with each of the plant monitoring stations regularly, it sends an HTTP request for a JSON file containing the status of each node.
 
 It then processes the JSON data and decides whether to issue a command to the plant monitoring station. The commands are as follows:
