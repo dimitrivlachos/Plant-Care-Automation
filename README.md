@@ -13,8 +13,8 @@ The ```Plant Monitoring Station```, on the other hand, would be attached to each
 # Breakdown of circuits
 ## Base Station
 
-![Base station breadboard](https://github.com/dimitrivlachos/Plant-Care-Automation/blob/main/Base%20Station/Base%20station%20bread%20board.png?raw=true)
+![Base station breadboard](https://github.com/dimitrivlachos/Plant-Care-Automation/blob/main/Base_Station/Base%20station%20bread%20board.png?raw=true)
 
 ## Plant Monitoring Station
 
-![Plant monitoring station breadboard](https://github.com/dimitrivlachos/Plant-Care-Automation/blob/main/Plant%20Monitor%20Station/Plant%20monitoring%20station%20bread%20board.png?raw=true)
+![Plant monitoring station breadboard](https://github.com/dimitrivlachos/Plant-Care-Automation/blob/main/Plant_Monitor_Station/Plant%20monitoring%20station%20bread%20board.png?raw=true)
