@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greenhouse Base Station Dashboard</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        background-color: #4CAF50;
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      .card {
+        border-radius: 25px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        text-align: center;
+        margin: 20px auto;
+        max-width: 400px;
+      }
+      p {
+        margin: 0;
+        font-size: 18px;
+        text-align: center;
+      }
+      strong {
+        font-size: 24px;
+      }
+      button {
+        margin: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 25px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Greenhouse Base Station Dashboard</h1>
+    </header>
+    <div>
+      <p> </p>
+      <p>Welcome to the base station dashboard!</p>
+      <p>These are the ambient room conditions outside of the greenhouse:</p>
+    </div>
+    <div class="card">
+      <p><strong>Temperature:</strong> <span id="temperature"></span> &degC</p>
+    </div>
+    <div class="card">
+      <p><strong>Humidity:</strong> <span id="humidity"></span> %</p>
+    </div>
+    <div class="card">
+      <p><strong>Pressure:</strong> <span id="pressure"></span> hPa</p>
+    </div>
+    <div class="card">
+      <p><strong>Light levels:</strong> <span id="lux"></span> lux</p>
+    </div>
+    <div class="card">
+      <p><strong>Fill level:</strong> <span id="fill-percent"></span> %</p>
+      <button onclick="waterPlant()">Water plant now</button>
+    </div>
+
+    <script>
+      function updateValues() {
+        const url = window.location.href + 'json';
+
+        fetch(url)
+          .then(response => response.json())
+          .then(data => {
+            const temperature = data.Readings.temperature;
+            const humidity = data.Readings.humidity;
+            const pressure = data.Readings.pressure;
+            const lux = data.Readings.lux;
+            const fill_percent = data.Readings.fill_percent;
+
+            document.getElementById('temperature').innerHTML = temperature.toFixed(2);
+            document.getElementById('humidity').innerHTML = humidity.toFixed(2);
+            document.getElementById('pressure').innerHTML = pressure.toFixed(2);
+            document.getElementById('lux').innerHTML = lux.toFixed(2);
+            document.getElementById('fill-percent').innerHTML = fill_percent;
+          })
+          .catch(error => {
+            console.error('Error fetching data:', error);
+          });
+      }
+
+      function waterPlant() {
+        const url = window.location.href + 'waterplant';
+
+        fetch(url, { method: 'POST' })
+          .then(response => {
+            if (response.ok) {
+              console.log('Plant watered successfully!');
+            } else {
+              console.error('Error watering plant:', response.statusText);
+            }
+          })
+          .catch(error => {
+            console.error('Error watering plant:', error);
+          });
+      }
+      
+      updateValues();
+      setInterval(updateValues, 5000);
+    </script>
+  </body>
+</html>

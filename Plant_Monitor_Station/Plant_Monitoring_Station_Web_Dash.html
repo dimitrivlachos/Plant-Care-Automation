@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greenhouse Plant Monitoring Dashboard</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+      }
+      header {
+        background-color: #4CAF50;
+        color: white;
+        padding: 20px;
+        text-align: center;
+      }
+      .card {
+        border-radius: 25px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        padding: 20px;
+        text-align: center;
+        margin: 20px auto;
+        max-width: 400px;
+      }
+      p {
+        margin: 0;
+        font-size: 18px;
+        text-align: center;
+      }
+      strong {
+        font-size: 24px;
+      }
+      button {
+        margin: 20px;
+        padding: 10px 20px;
+        font-size: 16px;
+        border-radius: 25px;
+        background-color: #4CAF50;
+        color: white;
+        border: none;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>Greenhouse Plant Monitoring Dashboard</h1>
+    </header>
+    <div>
+      <p></p>
+      <p>Welcome to the plant monitor dashboard!</p>
+      <p>These are the conditions inside of the greenhouse:</p>
+    </div>
+    
+    <section id="readings">
+      <div class="card">
+        <p><strong>Temperature:</strong> <span id="temperature"></span> &degC</p>
+      </div>
+      <div class="card">
+        <p><strong>Humidity:</strong> <span id="humidity"></span> %</p>
+      </div>
+      <div class="card">
+        <p><strong>Soil Moisture:</strong> <span id="soil-moisture"></span> %</p>
+        <button onclick="waterPlant()">Water plant now</button>
+      </div>
+    </section>
+
+    <hr>
+    <p>Current status of greenhouse:</p>
+    
+    <section id="states">
+      <div class="card">
+        <p><strong>Lid:</strong> <span id="servo-state"></span></p>
+      </div>
+      <div class="card">
+        <p><strong>Pump:</strong> <span id="pump-state"></span></p>
+      </div>
+      <div class="card">
+        <p><strong>Light:</strong> <span id="light-state"></span></p>
+      </div>
+    </section>
+
+    <script>
+      function updateValues() {
+        const url = window.location.href + 'json';
+
+        fetch(url)
+          .then(response => response.json())
+          .then(data => {
+            const temperature = data.Readings.temperature;
+            const humidity = data.Readings.humidity;
+            const soil_moisture = data.Readings.soil_moisture_percent;
+            const servo_state = data.States.servo_state;
+            const pump_state = data.States.pump_state;
+            const light_state = data.States.light_state;
+
+            document.getElementById('temperature').innerHTML = temperature.toFixed(2);
+            document.getElementById('humidity').innerHTML = humidity.toFixed(2);
+            document.getElementById('soil-moisture').innerHTML = soil_moisture;
+            document.getElementById('servo-state').innerHTML = servo_state ? "OPEN" : "CLOSED";
+            document.getElementById('pump-state').innerHTML = pump_state ? "ON" : "OFF";
+            document.getElementById('light-state').innerHTML = light_state ? "ON" : "OFF";
+          })
+          .catch(error => {
+            console.error('Error fetching data:', error);
+          });
+      }
+
+      function waterPlant() {
+        const url = window.location.href + 'waterplant';
+
+        fetch(url, { method: 'POST' })
+          .then(response => {
+            if (response.ok) {
+              console.log('Plant watered successfully!');
+            } else {
+              console.error('Error watering plant:', response.statusText);
+            }
+          })
+          .catch(error => {
+            console.error('Error watering plant:', error);
+          });
+      }
+      
+      updateValues();
+      setInterval(updateValues, 5000);
+    </script>
+  </body>
+</html>
+  
