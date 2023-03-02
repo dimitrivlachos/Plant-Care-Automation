@@ -359,7 +359,7 @@ void updateReadings() {
  * onto a static string.
  */
 const char index_html[] PROGMEM = R"rawliteral(
-  <!DOCTYPE html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -487,6 +487,8 @@ const char index_html[] PROGMEM = R"rawliteral(
       updateValues();
       setInterval(updateValues, 5000);
     </script>
+  </body>
+</html>
 )rawliteral";
 #pragma endregion
 
