@@ -12,6 +12,7 @@ The ```Plant Monitoring Station```, on the other hand, would be attached to each
 
 # Breakdown of circuits
 ## Base Station
+
 ### Input / Sensors
 * BMP280 - Temperature, humidity and barometric pressure sensor.
 * BH1750 - Ambient light sensor.
