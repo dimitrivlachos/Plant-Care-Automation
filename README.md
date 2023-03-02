@@ -1,5 +1,5 @@
 # Plant Care Automation
- Arduino based plant care IoT solution
+ESP8266 microcontroller based automated plant care project for ```CM3040 - Physical Computing and Internet of Things``` University of London submission.
 
 ![Base station breadboard](https://github.com/dimitrivlachos/Plant-Care-Automation/blob/main/Base%20Station/Base%20station%20bread%20board.png?raw=true)
 
