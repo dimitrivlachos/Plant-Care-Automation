@@ -628,10 +628,6 @@ inline void LEDOff() {
  * unused due to the lack of available pins.         *
  * * * * * * * * * * * * * * * * * * * * * * * * * * */
 #pragma region Battery code
-// void loop() {
-//   checkBattery();
-//   delay(1000);
-// }
 
 /*
  * Checks the battery voltage using a voltage divider.
