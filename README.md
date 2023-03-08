@@ -18,11 +18,10 @@ The ```Plant Monitoring Station```, on the other hand, would be attached to each
 * BH1750 - Ambient light sensor.
 * HCSR04 - Ultrasonic distance sensor.
 * Push button - Used to manually trigger watering.
-* Integrated LED - Used to indicate when the system is active on the network.
 
 ### Output / Actuators
 * SSD1306 - 128x64 OLED display.
-* Integrated LED - Used to indicate when the system is active.
+* Integrated LED - Used to indicate when the system is active on the network.
 
 ### JSON Data
 The base station node sends JSON data in the following format:
