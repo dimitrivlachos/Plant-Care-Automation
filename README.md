@@ -1,6 +1,8 @@
 # Plant Care Automation
 ESP8266 microcontroller based, automated plant care project for ```CM3040 - Physical Computing and Internet of Things``` University of London.
 
+[![IoT Demo Video](https://img.youtube.com/vi/c-YxRt0L1Ww/0.jpg)](https://www.youtube.com/watch?v=c-YxRt0L1Ww)
+
 To build out this system, I decided I would have a server-client type relationship between the controllers. The ```Base Station``` would be the server/host/controller of the entire system and it would serve multiple ```Plant Monitoring Stations```, which were the clients. I only built one example of each, but the general concept should be near infinitely scalable. These nodes communicate through REST-based HTTP requests, transferring JSON data as requested.
 
 ## Nodes
